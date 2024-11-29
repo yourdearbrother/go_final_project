@@ -2,13 +2,16 @@ package db
 
 import (
 	"database/sql"
+	"fmt"
 	"log"
 	"os"
-	"fmt"
+	"strconv"
 	"time"
 
 	_ "github.com/mattn/go-sqlite3"
 )
+
+const Layout = "20060102"
 
 var DB *sql.DB
 
@@ -49,7 +52,6 @@ func Init() {
 	if install {
 		log.Println("Создаем БД")
 
-
 		_, err := DB.Exec(`CREATE TABLE IF NOT EXISTS scheduler (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             date TEXT NOT NULL CHECK(length(date) = 8),
@@ -75,7 +77,7 @@ func Init() {
 func AddTask(date, title, comment, repeat string) (int64, error) {
 	query := `INSERT INTO scheduler (date, title, comment, repeat) VALUES (?, ?, ?, ?)`
 	res, err := DB.Exec(query, date, title, comment, repeat)
-	
+
 	if err != nil {
 		return 0, err
 	}
@@ -88,7 +90,7 @@ func AddTask(date, title, comment, repeat string) (int64, error) {
 }
 
 func GetTasksByDate(date string) ([]Task, error) {
-	query := `SELECT id, date, title, comment, repeat FROM scheduler WHERE date = ? ORDER BY date`
+	query := `SELECT id, date, title, comment, repeat FROM scheduler WHERE date = ? ORDER BY date LIMIT 30`
 	rows, err := DB.Query(query, date)
 	if err != nil {
 		return nil, err
@@ -103,7 +105,7 @@ func GetTasksByDate(date string) ([]Task, error) {
 		if err != nil {
 			return nil, err
 		}
-		task.ID = fmt.Sprintf("%d", id)
+		task.ID = strconv.Itoa(int(id))
 		tasks = append(tasks, task)
 	}
 	if err = rows.Err(); err != nil {
@@ -113,7 +115,7 @@ func GetTasksByDate(date string) ([]Task, error) {
 }
 
 func GetTasks() ([]Task, error) {
-	now := time.Now().Format("20060102")
+	now := time.Now().Format(Layout)
 	query := `SELECT id, date, title, comment, repeat FROM scheduler WHERE date >= ? ORDER BY date`
 	rows, err := DB.Query(query, now)
 	if err != nil {
@@ -129,7 +131,7 @@ func GetTasks() ([]Task, error) {
 		if err != nil {
 			return nil, err
 		}
-		task.ID = fmt.Sprintf("%d", id)
+		task.ID = strconv.Itoa(int(id))
 		tasks = append(tasks, task)
 	}
 	if err = rows.Err(); err != nil {
@@ -151,7 +153,7 @@ func GetTaskByID(id int64) (Task, error) {
 		}
 		return Task{}, err
 	}
-	task.ID = fmt.Sprintf("%d", taskID)
+	task.ID = strconv.Itoa(int(id))
 	return task, nil
 }
 
@@ -204,7 +206,7 @@ func SearchTasks(search string) ([]Task, error) {
 		if err != nil {
 			return nil, err
 		}
-		task.ID = fmt.Sprintf("%d", id)
+		task.ID = strconv.Itoa(int(id))
 		tasks = append(tasks, task)
 	}
 	if err = rows.Err(); err != nil {

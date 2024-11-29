@@ -1,13 +1,14 @@
 package handlers
 
 import (
-	"net/http"
-	"go_final_project/utils"
-	"go_final_project/db"
-	"time"
 	"encoding/json"
-	"strconv"
 	"fmt"
+	"net/http"
+	"strconv"
+	"time"
+
+	"go_final_project/db"
+	"go_final_project/internal"
 )
 
 func isDate(str string) bool {
@@ -17,7 +18,7 @@ func isDate(str string) bool {
 
 func convertToDate(str string) string {
 	date, _ := time.Parse("02.01.2006", str)
-	return date.Format("20060102")
+	return date.Format(db.Layout)
 }
 
 func NextDateHandler(w http.ResponseWriter, r *http.Request) {
@@ -25,14 +26,13 @@ func NextDateHandler(w http.ResponseWriter, r *http.Request) {
 	date := r.URL.Query().Get("date")
 	repeat := r.URL.Query().Get("repeat")
 
-	const layout = "20060102"
-	now, err := time.Parse(layout, nowStr)
+	now, err := time.Parse(db.Layout, nowStr)
 	if err != nil {
 		http.Error(w, "время не удалось преобразовать", http.StatusBadRequest)
 		return
 	}
 
-	nextDate, err := utils.NextDate(now, date, repeat)
+	nextDate, err := nextdate.NextDate(now, date, repeat)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -41,13 +41,6 @@ func NextDateHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(nextDate))
 }
 
-type Task struct {
-	ID      string `db:"id" json:"id"`
-	Date    string `db:"date" json:"date"`
-	Title   string `db:"title" json:"title"`
-	Comment string `db:"comment" json:"comment"`
-	Repeat  string `db:"repeat" json:"repeat"`
-}
 
 // Переключаем методы
 func TaskHandler(w http.ResponseWriter, r *http.Request) {
@@ -68,7 +61,7 @@ func TaskHandler(w http.ResponseWriter, r *http.Request) {
 func handleCreateTask(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 
-	var task Task
+	var task db.Task
 	if err := json.NewDecoder(r.Body).Decode(&task); err != nil {
 		response := map[string]string{"error": "ошибка десериализации JSON"}
 		w.WriteHeader(http.StatusBadRequest)
@@ -83,14 +76,13 @@ func handleCreateTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	const layout = "20060102"
 	now := time.Now()
-	nowStr := now.Format(layout)
+	nowStr := now.Format(db.Layout)
 
 	if task.Date == "" {
 		task.Date = nowStr
 	} else {
-		parsedDate, err := time.Parse(layout, task.Date)
+		parsedDate, err := time.Parse(db.Layout, task.Date)
 		if err != nil {
 			response := map[string]string{"error": "дата указана в неверном формате"}
 			w.WriteHeader(http.StatusBadRequest)
@@ -103,7 +95,7 @@ func handleCreateTask(w http.ResponseWriter, r *http.Request) {
 			if task.Repeat == "" {
 				task.Date = nowStr
 			} else {
-				nextDate, err := utils.NextDate(now, task.Date, task.Repeat)
+				nextDate, err := nextdate.NextDate(now, task.Date, task.Repeat)
 				if err != nil {
 					response := map[string]string{"error": err.Error()}
 					w.WriteHeader(http.StatusBadRequest)
@@ -131,7 +123,7 @@ func handleCreateTask(w http.ResponseWriter, r *http.Request) {
 func handleUpdateTask(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 
-	var task Task
+	var task db.Task
 	if err := json.NewDecoder(r.Body).Decode(&task); err != nil {
 		response := map[string]string{"error": "ошибка десериализации JSON"}
 		w.WriteHeader(http.StatusBadRequest)
@@ -153,14 +145,13 @@ func handleUpdateTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	const layout = "20060102"
 	now := time.Now()
-	nowStr := now.Format(layout)
+	nowStr := now.Format(db.Layout)
 
 	if task.Date == "" {
 		task.Date = nowStr
 	} else {
-		parsedDate, err := time.Parse(layout, task.Date)
+		parsedDate, err := time.Parse(db.Layout, task.Date)
 		if err != nil {
 			response := map[string]string{"error": "дата указана в неверном формате"}
 			w.WriteHeader(http.StatusBadRequest)
@@ -173,7 +164,7 @@ func handleUpdateTask(w http.ResponseWriter, r *http.Request) {
 			if task.Repeat == "" {
 				task.Date = nowStr
 			} else {
-				nextDate, err := utils.NextDate(now, task.Date, task.Repeat)
+				nextDate, err := nextdate.NextDate(now, task.Date, task.Repeat)
 				if err != nil {
 					response := map[string]string{"error": err.Error()}
 					w.WriteHeader(http.StatusBadRequest)
@@ -243,7 +234,6 @@ func handleDeleteTask(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]string{})
 }
 
-
 func HandleCompleteTask(w http.ResponseWriter, r *http.Request) {
 	idParam := r.URL.Query().Get("id")
 	if idParam == "" {
@@ -270,7 +260,7 @@ func HandleCompleteTask(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	} else {
-		nextDate, err := utils.NextDate(time.Now(), task.Date, task.Repeat)
+		nextDate, err := nextdate.NextDate(time.Now(), task.Date, task.Repeat)
 		if err != nil {
 			http.Error(w, `{"error":"не удалось получить следующую дату"}`, http.StatusBadRequest)
 			return

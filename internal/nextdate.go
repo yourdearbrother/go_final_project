@@ -1,10 +1,10 @@
-package utils
+package nextdate
 
 import (
 	"errors"
+	"strconv"
 	"strings"
 	"time"
-	"strconv"
 )
 
 func NextDate(now time.Time, date string, repeat string) (string, error) {
@@ -39,14 +39,13 @@ func NextDate(now time.Time, date string, repeat string) (string, error) {
 
 			timBase = timBase.AddDate(1, 0, 0)
 
-
 			if timBase.Day() == origDay && timBase.Month() == origMonth {
 
 				if timBase.After(now) {
 					break
 				}
 			} else {
-				
+
 				timBase = time.Date(timBase.Year(), time.March, 1, 0, 0, 0, 0, timBase.Location())
 				if timBase.After(now) {
 					break
@@ -63,7 +62,7 @@ func NextDate(now time.Time, date string, repeat string) (string, error) {
 
 		days, err := strconv.Atoi(rep[1])
 		if err != nil {
-			return "", err 
+			return "", err
 		}
 
 		if days > 400 {

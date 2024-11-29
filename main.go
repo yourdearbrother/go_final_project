@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"net/http"
+
 	"go_final_project/db"
 	"go_final_project/handlers"
 )
@@ -23,6 +24,5 @@ func main() {
 	if err != nil {
 		log.Printf("Error occurred: %v", err)
 		return
+	}
 }
-}
-
